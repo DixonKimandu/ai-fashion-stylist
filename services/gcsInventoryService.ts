@@ -1,8 +1,8 @@
 import type { InventoryItem } from '../types';
 import fallbackInventory from '../inventory.example.json';
 
-const GCS_BUCKET_NAME = process.env.GCS_BUCKET_NAME || 'maker-suite-images';
-const GCS_INVENTORY_PATH = process.env.GCS_INVENTORY_PATH; // Optional: path to inventory.json metadata file
+const GCS_BUCKET_NAME = import.meta.env.VITE_GCS_BUCKET_NAME || 'maker-suite-images';
+const GCS_INVENTORY_PATH = import.meta.env.VITE_GCS_INVENTORY_PATH; // Optional: path to inventory.json metadata file
 
 /**
  * Constructs a public GCS URL for a file

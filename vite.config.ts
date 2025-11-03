@@ -11,10 +11,10 @@ export default defineConfig(({ mode }) => {
       },
       plugins: [react()],
       define: {
-        'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
-        'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
-        'process.env.GCS_BUCKET_NAME': JSON.stringify(env.GCS_BUCKET_NAME),
-        'process.env.GCS_INVENTORY_PATH': JSON.stringify(env.GCS_INVENTORY_PATH)
+        // 'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
+        // 'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
+        // 'process.env.GCS_BUCKET_NAME': JSON.stringify(env.GCS_BUCKET_NAME),
+        // 'process.env.GCS_INVENTORY_PATH': JSON.stringify(env.GCS_INVENTORY_PATH)
       },
       resolve: {
         alias: {
