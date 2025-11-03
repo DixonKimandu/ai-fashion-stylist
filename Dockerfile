@@ -14,6 +14,16 @@ RUN npm ci
 # Copy source code
 COPY . .
 
+# Build-time arguments for embedding into the client bundle
+ARG GEMINI_API_KEY
+ARG GCS_BUCKET_NAME
+ARG GCS_INVENTORY_PATH
+
+# Expose args to the build environment so Vite can read them
+ENV GEMINI_API_KEY=$GEMINI_API_KEY \
+    GCS_BUCKET_NAME=$GCS_BUCKET_NAME \
+    GCS_INVENTORY_PATH=$GCS_INVENTORY_PATH
+
 # Build the application
 RUN npm run build
 
