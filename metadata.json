@@ -1,0 +1,5 @@
+{
+  "name": "AI Fashion Stylist",
+  "description": "An AI-powered stylist that analyzes your clothing items, provides complete outfit recommendations, and generates a visual of the final look.",
+  "requestFramePermissions": []
+}

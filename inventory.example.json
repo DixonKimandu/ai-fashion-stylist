@@ -1,0 +1,28 @@
+[
+  {
+    "id": 1,
+    "filename": "sports-jacket.jpg",
+    "alt": "Sports Jacket"
+  },
+  {
+    "id": 2,
+    "filename": "black-sweater.jpg",
+    "alt": "Black Sweater"
+  },
+  {
+    "id": 3,
+    "filename": "denim-jeans.jpg",
+    "alt": "Denim Jeans"
+  },
+  {
+    "id": 4,
+    "filename": "cargo-pants.jpg",
+    "alt": "Cargo Pants"
+  },
+  {
+    "id": 5,
+    "filename": "hipster-pants.jpg",
+    "alt": "Hipster Pants"
+  }
+]
+
