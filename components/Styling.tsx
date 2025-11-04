@@ -8,22 +8,48 @@ import { downloadImage, downloadOutfitPDF } from '../utils/downloadUtils';
 import type { OutfitRecommendation, InventoryItem } from '../types';
 import Card from './Card';
 
-const imageUrlToBase64 = async (url: string): Promise<{ base64: string, mimeType: string }> => {
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error(`Failed to fetch image from ${url}: ${response.statusText}`);
+const imageUrlToBase64 = async (url: string, timeout = 30000, retries = 2): Promise<{ base64: string, mimeType: string }> => {
+  // Retry logic for mobile networks which can be flaky
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      // Use AbortController for timeout on mobile
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), timeout);
+      
+      const response = await fetch(url, { 
+        signal: controller.signal,
+        // Add cache control for mobile browsers
+        cache: 'no-cache',
+      });
+      clearTimeout(timeoutId);
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch image from ${url}: ${response.statusText}`);
+      }
+      const blob = await response.blob();
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(blob);
+        reader.onload = () => {
+          const result = reader.result as string;
+          const base64 = result.split(',')[1];
+          resolve({ base64, mimeType: blob.type });
+        };
+        reader.onerror = (error) => reject(error);
+      });
+    } catch (error) {
+      // If this is the last attempt, throw the error
+      if (attempt === retries) {
+        if (error instanceof Error && error.name === 'AbortError') {
+          throw new Error(`Request timeout while fetching image from ${url}`);
+        }
+        throw error;
+      }
+      // Otherwise, wait a bit before retrying (exponential backoff)
+      await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)));
+    }
   }
-  const blob = await response.blob();
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(blob);
-    reader.onload = () => {
-      const result = reader.result as string;
-      const base64 = result.split(',')[1];
-      resolve({ base64, mimeType: blob.type });
-    };
-    reader.onerror = (error) => reject(error);
-  });
+  throw new Error(`Failed to fetch image from ${url} after ${retries + 1} attempts`);
 };
 
 const fileToBase64 = (file: File): Promise<{ base64: string, mimeType: string }> => {
@@ -105,9 +131,48 @@ const Styling: React.FC = () => {
       if (inventory.length === 0) {
         throw new Error('Inventory is not loaded. Please wait and try again.');
       }
-      const inventoryImagesData = await Promise.all(
-        inventory.map(item => imageUrlToBase64(item.src))
-      );
+
+      // Process images in batches to avoid overwhelming mobile browsers
+      // Mobile browsers typically support 6-8 concurrent connections max
+      const BATCH_SIZE = 4; // Process 4 images at a time
+      const inventoryImagesData: { base64: string, mimeType: string }[] = [];
+      
+      for (let i = 0; i < inventory.length; i += BATCH_SIZE) {
+        const batch = inventory.slice(i, i + BATCH_SIZE);
+        const batchNumber = Math.floor(i / BATCH_SIZE) + 1;
+        const totalBatches = Math.ceil(inventory.length / BATCH_SIZE);
+        
+        setLoadingMessage(`Fetching inventory items... (${batchNumber}/${totalBatches})`);
+        
+        try {
+          // Process each item in the batch individually to handle failures gracefully
+          const batchResults = await Promise.allSettled(
+            batch.map(item => imageUrlToBase64(item.src))
+          );
+          
+          // Only add successfully processed images
+          batchResults.forEach((result, idx) => {
+            if (result.status === 'fulfilled') {
+              inventoryImagesData.push(result.value);
+            } else {
+              console.warn(`Failed to fetch image ${batch[idx].src}:`, result.reason);
+            }
+          });
+        } catch (batchError) {
+          console.error(`Error processing batch ${batchNumber}:`, batchError);
+          // Continue with next batch instead of failing completely
+          // This makes it more resilient on mobile
+        }
+        
+        // Small delay between batches to avoid overwhelming mobile networks
+        if (i + BATCH_SIZE < inventory.length) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+      }
+
+      if (inventoryImagesData.length === 0) {
+        throw new Error('Failed to fetch any inventory images. Please check your connection and try again.');
+      }
 
       setLoadingMessage('Analyzing garment & styling...');
       const rec = await getOutfitRecommendation(prompt, userImageData, inventoryImagesData);
