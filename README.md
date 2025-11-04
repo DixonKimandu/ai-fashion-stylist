@@ -51,23 +51,23 @@ graph TB
 
     subgraph "Next.js Application"
         subgraph "API Routes"
-            InventoryAPI[/api/inventory]
-            StylingAPI[/api/styling/recommend]
-            StylingImgAPI[/api/styling/image]
-            SustainAPI[/api/sustainability/design]
-            SustainImgAPI[/api/sustainability/image]
+            InventoryAPI["/api/inventory"]
+            StylingAPI["/api/styling/recommend"]
+            StylingImgAPI["/api/styling/image"]
+            SustainAPI["/api/sustainability/design"]
+            SustainImgAPI["/api/sustainability/image"]
         end
         
         subgraph "Services Layer"
-            GeminiService[geminiService.ts]
-            GCSService[gcsInventoryService.ts]
-            SustainService[sustainabilityService.ts]
+            GeminiService["geminiService.ts"]
+            GCSService["gcsInventoryService.ts"]
+            SustainService["sustainabilityService.ts"]
         end
         
         subgraph "Core Libraries"
-            AILib[lib/ai.ts<br/>AI Config & Schemas]
-            Utils[utils/downloadUtils.ts<br/>PDF/Image Download]
-            Types[types.ts<br/>Type Definitions]
+            AILib["lib/ai.ts<br/>AI Config & Schemas"]
+            Utils["utils/downloadUtils.ts<br/>PDF/Image Download"]
+            Types["types.ts<br/>Type Definitions"]
         end
     end
 
@@ -109,12 +109,12 @@ sequenceDiagram
     participant User
     participant Styling as Styling Component
     participant Service as geminiService
-    participant API as /api/styling/recommend
+    participant API as "API: /api/styling/recommend"
     participant Gemini as Gemini AI
     participant GCS as Google Cloud Storage
 
     User->>Styling: Upload garment + prompt
-    Styling->>GCS: Fetch inventory (via /api/inventory)
+    Styling->>GCS: Fetch inventory via API
     GCS-->>Styling: Return inventory images
     Styling->>Service: getOutfitRecommendation()
     Service->>API: POST with images + prompt
@@ -131,25 +131,25 @@ sequenceDiagram
 ```mermaid
 graph LR
     subgraph "User Interface"
-        A[Home.tsx] --> B[Styling.tsx]
-        A --> C[Sustainability.tsx]
-        B --> D[Card.tsx]
+        A["Home.tsx"] --> B["Styling.tsx"]
+        A --> C["Sustainability.tsx"]
+        B --> D["Card.tsx"]
         C --> D
-        A --> E[Tabs.tsx]
+        A --> E["Tabs.tsx"]
     end
 
     subgraph "API Layer"
-        F[/api/inventory]
-        G[/api/styling/recommend]
-        H[/api/styling/image]
-        I[/api/sustainability/design]
-        J[/api/sustainability/image]
+        F["/api/inventory"]
+        G["/api/styling/recommend"]
+        H["/api/styling/image"]
+        I["/api/sustainability/design"]
+        J["/api/sustainability/image"]
     end
 
     subgraph "Business Logic"
-        K[geminiService.ts]
-        L[gcsInventoryService.ts]
-        M[sustainabilityService.ts]
+        K["geminiService.ts"]
+        L["gcsInventoryService.ts"]
+        M["sustainabilityService.ts"]
     end
 
     subgraph "External"
@@ -180,12 +180,12 @@ flowchart TD
     Upload --> Fetch[Fetch inventory from GCS]
     Fetch --> Select[Select inventory items]
     Select --> Enter[Enter styling prompt]
-    Enter --> Call[Call /api/styling/recommend]
+    Enter --> Call["Call API: /api/styling/recommend"]
     Call --> Process[Process with Gemini AI]
     Process --> Return[Return recommendation JSON]
     Return --> Display[Display recommendation card]
     Display --> Generate{Generate image?}
-    Generate -->|Yes| ImageAPI[Call /api/styling/image]
+    Generate -->|Yes| ImageAPI["Call API: /api/styling/image"]
     Generate -->|No| Download[Download PDF option]
     ImageAPI --> ImageDisplay[Display generated image]
     ImageDisplay --> Download
@@ -198,12 +198,12 @@ flowchart TD
 flowchart TD
     Start([User starts]) --> Upload[Upload old clothing images]
     Upload --> Material[Select additional material]
-    Material --> Call[Call /api/sustainability/design]
+    Material --> Call["Call API: /api/sustainability/design"]
     Call --> Analyze[Gemini analyzes clothing]
     Analyze --> Design[Generate tote bag design]
     Design --> Return[Return design JSON]
     Return --> Display[Display design card]
-    Display --> Generate[Call /api/sustainability/image]
+    Display --> Generate["Call API: /api/sustainability/image"]
     Generate --> Image[Display generated tote bag]
     Image --> Download[Download PDF option]
     Download --> End([Complete])
