@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState, useCallback, useEffect } from 'react';
 import { Loader2, Zap, Shirt, Sun, UploadCloud, Image as ImageIcon, Download, FileText } from 'lucide-react';
 import { getOutfitRecommendation, generateOutfitImage } from '../services/geminiService';

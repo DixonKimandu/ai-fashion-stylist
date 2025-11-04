@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState, useCallback } from 'react';
 import { Loader2, Image as ImageIcon, UploadCloud, Recycle, Download, FileText } from 'lucide-react';
 import { getToteBagDesign, generateToteBagImage } from '../services/sustainabilityService';

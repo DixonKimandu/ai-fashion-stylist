@@ -1,100 +1,51 @@
-import { GoogleGenAI, Type, Modality, GenerateContentResponse } from "@google/genai";
 import type { OutfitRecommendation } from '../types';
-
-const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
-
-if (!API_KEY) {
-  // A user-friendly error will be shown in the UI.
-  console.error("API_KEY environment variable not set");
-}
-
-const ai = new GoogleGenAI({ apiKey: API_KEY! });
-
-const outfitRecommendationSchema = {
-  type: Type.OBJECT,
-  properties: {
-    title: { type: Type.STRING, description: "A catchy title for the outfit recommendation." },
-    justification: { type: Type.STRING, description: "A 1-2 sentence professional explanation of why this outfit works, mentioning which inventory items were used." },
-    accessories: {
-      type: Type.ARRAY,
-      description: "List of suggested accessories (shoes, jewelry, bags, etc.) that could be from the inventory or complementary.",
-      items: { type: Type.STRING }
-    },
-    color_palette: {
-      type: Type.ARRAY,
-      description: "Suggested colors that complement the main garment and chosen inventory items.",
-      items: { type: Type.STRING }
-    },
-    image_description: {
-      type: Type.STRING,
-      description: "A detailed, vivid description of the complete outfit and its setting for image generation. This will be used as the prompt for the image model. Ensure it describes a full person wearing the user's garment combined with items from the inventory."
-    }
-  },
-  required: ["title", "justification", "accessories", "color_palette", "image_description"]
-};
-
-const systemInstruction = "You are a world-class fashion stylist. Your task is to analyze a clothing item provided by the user (the first image) and a collection of inventory items (the subsequent images). Based on the user's context, create a complete, fashionable outfit by pairing the user's item with suitable items from the inventory. Your text response must be strictly in the form of a JSON object that adheres to the provided schema. The `image_description` should vividly describe a person wearing the complete, final outfit for image generation. Be creative and professional.";
 
 export const getOutfitRecommendation = async (
   prompt: string,
   userImage: { base64: string; mimeType: string },
   inventoryImages: { base64: string; mimeType: string }[]
 ): Promise<OutfitRecommendation> => {
-
-  const userImagePart = {
-    inlineData: {
-      data: userImage.base64,
-      mimeType: userImage.mimeType,
-    },
-  };
-
-  const inventoryImageParts = inventoryImages.map(img => ({
-    inlineData: {
-      data: img.base64,
-      mimeType: img.mimeType,
-    }
-  }));
-
-  const textPart = {
-    text: `Style the user's garment (first image) using items from the inventory (subsequent images) for the following occasion or vibe: "${prompt}"`,
-  };
-
-  const response = await ai.models.generateContent({
-    model: 'gemini-2.5-flash',
-    contents: [{ parts: [textPart, userImagePart, ...inventoryImageParts] }],
-    config: {
-      systemInstruction: systemInstruction,
-      responseMimeType: "application/json",
-      responseSchema: outfitRecommendationSchema,
-    },
-  });
-
-  const jsonText = response.text.trim();
   try {
-    return JSON.parse(jsonText) as OutfitRecommendation;
-  } catch (e) {
-    console.error("Failed to parse JSON response:", jsonText);
-    throw new Error("The AI returned an invalid response format. Please try again.");
+    const body = JSON.stringify({ prompt, userImage, inventoryImages });
+    const bodySizeMB = new Blob([body]).size / (1024 * 1024);
+    
+    if (bodySizeMB > 50) {
+      throw new Error(`Request body is too large (${bodySizeMB.toFixed(2)}MB). Please reduce the number of inventory images.`);
+    }
+
+    const res = await fetch('/api/styling/recommend', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body,
+    });
+    
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || `Failed to get outfit recommendation (${res.status} ${res.statusText})`);
+    }
+    return res.json();
+  } catch (err) {
+    if (err instanceof Error) {
+      // Re-throw with more context if it's already an Error
+      if (err.message.includes('fetch failed') || err.message.includes('network')) {
+        throw new Error(`Network error: Unable to reach the server. Please check your connection and ensure the server is running. Original error: ${err.message}`);
+      }
+      throw err;
+    }
+    throw new Error('Failed to get outfit recommendation: Unknown error');
   }
 };
 
 export const generateOutfitImage = async (imagePrompt: string): Promise<string> => {
-  const response: GenerateContentResponse = await ai.models.generateContent({
-    model: 'gemini-2.5-flash-image',
-    contents: {
-      parts: [{ text: imagePrompt }],
-    },
-    config: {
-      responseModalities: [Modality.IMAGE],
-    },
+  const res = await fetch('/api/styling/image', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ imagePrompt }),
   });
-
-  for (const part of response.candidates[0].content.parts) {
-    if (part.inlineData) {
-      const base64ImageBytes: string = part.inlineData.data;
-      return `data:${part.inlineData.mimeType};base64,${base64ImageBytes}`;
-    }
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Failed to generate outfit image');
   }
-
-  throw new Error("No image was generated by the AI. The description might have been too complex.");
+  const data = await res.json();
+  return data.imageDataUrl as string;
 };
